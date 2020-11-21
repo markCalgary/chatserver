@@ -1,5 +1,6 @@
 package com.chatserver.entity;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -16,7 +17,7 @@ import com.sun.istack.NotNull;
 @Entity
 @Table(name="user")
 public class UserEntity {
-	@Id @GeneratedValue private int userId;
+	@Id @GeneratedValue private BigInteger userId;
 	@NotNull private String userName;
 	@NotNull private String password;
 	@NotNull private String screenName;
@@ -38,11 +39,24 @@ public class UserEntity {
 	
 	public UserEntity() {}
 	
-	public int getUserId() {
+	
+	public BigInteger getUserId() {
 		return userId;
 	}
-	public void setUserId(int userId) {
+	public void setUserId(BigInteger userId) {
 		this.userId = userId;
+	}
+	public List<MessageEntity> getMessageAuthorList() {
+		return messageAuthorList;
+	}
+	public void setMessageAuthorList(List<MessageEntity> messageAuthorList) {
+		this.messageAuthorList = messageAuthorList;
+	}
+	public List<ChatroomEntity> getChatroomCreateList() {
+		return chatroomCreateList;
+	}
+	public void setChatroomCreateList(List<ChatroomEntity> chatroomCreateList) {
+		this.chatroomCreateList = chatroomCreateList;
 	}
 	public String getUserName() {
 		return userName;
