@@ -2,10 +2,13 @@ package com.chatserver.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Component;
 
+import com.chatserver.dao.UserDao;
 import com.chatserver.entity.UserEntity;
 import com.chatserver.repository.UserRepo;
 
+@Component
 public class UserService {
 
 	private UserRepo userRepo;
@@ -15,10 +18,9 @@ public class UserService {
 	public UserService (UserRepo inUserRepo, SessionService inSessionService) {
 		this.userRepo = inUserRepo;
 		this.sessionService = inSessionService;
-		
 	}
 	
-	public void addUser (String inUserName, String inPassword, String inScreenName) {
+	public UserDao addUser (String inUserName, String inPassword, String inScreenName) {
 		if (this.userRepo.findByUserNameIgnoreCase(inUserName) !=null) {
 			throw new DataIntegrityViolationException("Username is not unique.  New user not created");
 		}
@@ -27,6 +29,10 @@ public class UserService {
 		}
 		UserEntity aUserEntity = new UserEntity(inUserName, inPassword, inScreenName);
 		this.userRepo.save(aUserEntity);
+		UserDao aUserDao = new UserDao();
+		aUserDao.setUserName(inUserName);
+		aUserDao.setScreenName(inScreenName);
+		return aUserDao;
 	}
 	
 	public void logInUser (String inUserName, String inPassword) {

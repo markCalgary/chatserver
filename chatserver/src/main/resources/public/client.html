@@ -1,20 +1,20 @@
 <html>
 	<head>
 	    <title>Chat WebSocket</title>
-	    
-	    <script src="js/sockjs.min.js"></script>
-	    <script src="js/stomp.umd.min.js"></script>
+	<script src="js/sockjs-0.3.4.js"></script>
+	    <script src="js/stomp.js"></script>	    
 	    
 	    <script type="text/javascript">
 
 	        var stompClient = null;
-
+	        
 	        function setConnected(connected) {
 
 	            document.getElementById('connect').disabled = connected;
 	            document.getElementById('disconnect').disabled = !connected;
 	            document.getElementById('conversationDiv').style.visibility = connected ? 'visible' : 'hidden';
-	            document.getElementById('response').innerHTML = '';
+	            document.getElementById('userResponse').innerHTML = '';
+	            document.getElementById('roomResponse').innerHTML = '';
 	        }
 
 	        function connect() {
@@ -26,9 +26,11 @@
 
 	            	setConnected(true);
 	                console.log('Connected: ' + frame);
-	                stompClient.subscribe('/chatserver/topic/messages', function(messageOutput) {
-
-	                    showMessageOutput(JSON.parse(messageOutput.body));
+	                stompClient.subscribe('/topic/1', function(roomMessageOutput) {
+	                    showRoomMessageOutput(JSON.parse(roomMessageOutput.body));
+	                });
+	                stompClient.subscribe('/queue/1', function(userMessageOutput) {
+	                    showUserMessageOutput(JSON.parse(userMessageOutput.body));
 	                });
 	            });
 	        }
@@ -41,18 +43,49 @@
 
 	            setConnected(false);
 	            console.log("Disconnected");
+	            document.getElementById('divIdlogin').style.visibility = 'visible';
+	            document.getElementById('divIdregistration').style.visibility = 'hidden';
+		        
 	        }
 
-	        function sendMessage() {
-
+	        function buttonLogIn() {
+	        	
+	        }
+	        
+	        function sendRoomMessage() {
 	        	var from = document.getElementById('from').value;
 	            var text = document.getElementById('text').value;
-	            stompClient.send("/chatserver/app/chat", {}, JSON.stringify({'from':from, 'text':text}));
+	            // stompClient.send("/chatserver/room/1/messages", {}, JSON.stringify({'from':from, 'text':text}));
+	            var xhttp = new XMLHttpRequest();
+	            xhttp.open("POST", "http://localhost:8080/chatserver/room2/1/messages", true);
+	            xhttp.setRequestHeader("Content-Type", "application/json");
+	            var data = JSON.stringify({'from':from, 'text':text}); 
+	            xhttp.send(data);
 	        }
 
-	        function showMessageOutput(messageOutput) {
+	        function sendUserMessage() {
+	        	var from = document.getElementById('from').value;
+	            var text = document.getElementById('text').value;
+	            // stompClient.send("/chatserver/room/1/messages", {}, JSON.stringify({'from':from, 'text':text}));
+	            var xhttp = new XMLHttpRequest();
+	            xhttp.open("POST", "http://localhost:8080/chatserver/user/1/messages", true);
+	            xhttp.setRequestHeader("Content-Type", "application/json");
+	            var data = JSON.stringify({'from':from, 'text':text}); 
+	            xhttp.send(data);
+	        }
 
-	            var response = document.getElementById('response');
+	        
+	        function showUserMessageOutput(messageOutput) {
+
+	            var response = document.getElementById('userResponse');
+	            var p = document.createElement('p');
+	            p.style.wordWrap = 'break-word';
+	            p.appendChild(document.createTextNode(messageOutput.from + ": " + messageOutput.text + " (" + messageOutput.time + ")"));
+	            response.appendChild(p);
+	        }
+	        function showRoomMessageOutput(messageOutput) {
+
+	            var response = document.getElementById('roomResponse');
 	            var p = document.createElement('p');
 	            p.style.wordWrap = 'break-word';
 	            p.appendChild(document.createTextNode(messageOutput.from + ": " + messageOutput.text + " (" + messageOutput.time + ")"));
@@ -66,9 +99,19 @@
 	<body onload="disconnect()">
 
 		<div>
-			<div>
-				<input type="text" id="from" placeholder="Choose a nickname"/>
-			</div>
+			<div id="divIdlogin">
+				<input type="text" id="username" placeholder="Choose a username"/>
+				<input type="password" id="password" placeholder="Choose a password"/>
+				<button id="connect" onclick="connect();">Connect</button>
+				<button id="openRegister" onclick="openRegister();">Register New User</button>
+		    </div>
+		    <div id="divIdregistration">
+				<input type="text" id="username" placeholder="Choose a username"/>
+				<input type="password" id="password" placeholder="Choose a password"/>
+				<input type="text" id="screenName" placeholder="Choose a screen name"/>
+				<button id="register" onclick="register();">Register</button>
+				<button id="cancelRegistration" onclick="register();">Cancel Registration</button>
+		    </div>
 			<br />
 		    <div>
 		        <button id="connect" onclick="connect();">Connect</button>
@@ -77,8 +120,12 @@
 		    <br />
 		    <div id="conversationDiv">
 		        <input type="text" id="text" placeholder="Write a message..."/>
-		        <button id="sendMessage" onclick="sendMessage();">Send</button>
-		        <p id="response"></p>
+		        <button id="sendRoomMessage" onclick="sendRoomMessage();">Send Room</button>
+		        <button id="sendUserMessage" onclick="sendUserMessage();">Send User</button>
+		        Room Response:
+		        <p id="roomResponse"></p>
+		        User Response:
+		        <p id="userResponse"></p>
 		    </div>
 		</div>
 
