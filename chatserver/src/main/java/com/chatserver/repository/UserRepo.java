@@ -13,6 +13,4 @@ public interface UserRepo extends JpaRepository <UserEntity, BigInteger>{
 	UserEntity findByUserNameIgnoreCase(String inScreenName);
 	
 	UserEntity findByScreenNameIgnoreCase(String inScreenName);
-	
-	UserEntity findByUserNameIgnoreCaseAndPassword(String inUsername, String inPassword);
 }

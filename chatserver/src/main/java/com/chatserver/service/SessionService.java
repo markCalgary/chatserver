@@ -1,27 +1,23 @@
 package com.chatserver.service;
 
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import com.chatserver.entity.UserEntity;
 import com.chatserver.model.SessionModel;
-import com.chatserver.repository.UserRepo;
 
 @Component
 public class SessionService {
 
-	private UserRepo userRepo;
+	private static final int SESSION_CHECK_MILLISECONDS = 120000; // every 2 minutes
+	private static final int TIMEOUT_WINDOW_MINUTES = 20;
 	
-	@Autowired
-	public SessionService (UserRepo inUserRepo) {
-		this.userRepo = inUserRepo;
-	}
-	
-	private static HashMap<String, SessionModel> sessionList = new HashMap<String, SessionModel>();
+	private static Hashtable <String, SessionModel> sessionList = new Hashtable<String, SessionModel>();
 	
 	public SessionModel getSession (String inSessionId) {
 		return sessionList.get(inSessionId);
@@ -48,4 +44,22 @@ public class SessionService {
 	public void removeSession(String inSessionId) {
 		sessionList.remove(inSessionId);
 	}
+	
+	@Scheduled(fixedRate = SESSION_CHECK_MILLISECONDS)
+	private void expireOldSessions() {
+		// separated the iteration from the remove otherwise you get a concurrency error
+		Enumeration <String> enu =sessionList.keys();
+		ArrayList <String> removeList = new ArrayList <String>();
+		while(enu.hasMoreElements()) {
+			String aKey = enu.nextElement();
+			LocalDateTime window = LocalDateTime.now().minusMinutes(TIMEOUT_WINDOW_MINUTES);
+			if (sessionList.get(aKey).getLastHitTime().isBefore(window)) {
+				removeList.add(aKey);
+			}
+		}
+		for (String aKey: removeList) {
+			sessionList.remove(aKey);
+		}
+	} 
+
 }

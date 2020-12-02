@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 
 import com.chatserver.entity.MessageEntity;
 
-public class MessageDao {
+public class MessageResponseDao {
 	private BigInteger messageId;
 	private String author_screenName;
 	private LocalDateTime createDateTime;
@@ -13,7 +13,7 @@ public class MessageDao {
 	private String privateScreenName;
 	private String message;
 
-	public MessageDao() {}
+	public MessageResponseDao() {}
 	
 	public BigInteger getMessageId() {
 		return messageId;

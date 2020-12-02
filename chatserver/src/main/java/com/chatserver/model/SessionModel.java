@@ -3,7 +3,7 @@ package com.chatserver.model;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 
-import com.chatserver.util.Utility;
+import com.chatserver.util.CreateIdUtil;
 
 public class SessionModel {
 
@@ -11,11 +11,11 @@ public class SessionModel {
 	private BigInteger userId;
 	private String userName;
 	private String screenName;
-	
+		
 	private LocalDateTime lastHitTime;
 	
 	public SessionModel(BigInteger inUserId, String inUserName, String inScreenName) {
-		this.sessionId = Utility.createSessionId();
+		this.sessionId = CreateIdUtil.createSessionId();
 		this.userId = inUserId;
 		this.userName = inUserName;
 		this.screenName = inScreenName;

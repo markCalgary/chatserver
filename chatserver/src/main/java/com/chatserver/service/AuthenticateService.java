@@ -1,6 +1,8 @@
 package com.chatserver.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
@@ -14,18 +16,21 @@ public class AuthenticateService {
 
 	private UserRepo userRepo;
 	private SessionService sessionService;
+	private AuthenticationManager authManager;
 	
 	@Autowired
-	public AuthenticateService (UserRepo inUserRepo, SessionService inSessionService) {
+	public AuthenticateService (UserRepo inUserRepo, SessionService inSessionService, 
+			AuthenticationManager inAuthManager) {
 		this.userRepo = inUserRepo;
 		this.sessionService = inSessionService;
+		this.authManager = inAuthManager;
 	}
 	
 	public AuthenticateResponseDao loginUser (String inUserName, String inPassword) {
-		UserEntity aUser = this.userRepo.findByUserNameIgnoreCaseAndPassword(inUserName, inPassword);
-		if (aUser == null) {
-			throw new UsernameNotFoundException("Username not found");
-		}
+		authManager.authenticate(
+				new UsernamePasswordAuthenticationToken(inUserName, inPassword));
+		
+		UserEntity aUser = this.userRepo.findByUserNameIgnoreCase(inUserName);
 		SessionModel aSession = this.sessionService.addSession(aUser.getUserId(), aUser.getUserName(), aUser.getScreenName());
 		AuthenticateResponseDao aResp = new AuthenticateResponseDao();
 		aResp.setScreenName(aUser.getScreenName());

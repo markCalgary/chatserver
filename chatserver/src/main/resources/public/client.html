@@ -6,126 +6,392 @@
 	    
 	    <script type="text/javascript">
 
-	        var stompClient = null;
-	        
+	        var stompClient = null;		// used to store connection to server
+			var sessionId = null;		// used to pass sessionId to backend for security reasons
+			var screenName = null;		// user screenName used to subscribe to user messaging
+			var roomSubscribe = null;	// the subscriber object for the room (so can disconnect later)
+			var userSubscribe = null;	// the subscriber object for the user (can disconnect later)
+			var roomList = null;		// stores the room list so that later can store the room info
+			
 	        function setConnected(connected) {
 
-	            document.getElementById('connect').disabled = connected;
-	            document.getElementById('disconnect').disabled = !connected;
 	            document.getElementById('conversationDiv').style.visibility = connected ? 'visible' : 'hidden';
-	            document.getElementById('userResponse').innerHTML = '';
-	            document.getElementById('roomResponse').innerHTML = '';
+	            document.getElementById('userMessages').innerHTML = '';
+	            document.getElementById('roomMessages').innerHTML = '';
 	        }
 
+	        
 	        function connect() {
 
 	            var socket = new SockJS('/chatserver/chat');
 	            stompClient = Stomp.over(socket);
 
-	            stompClient.connect({}, function(frame) {
+	            stompClient.connect({Authorization:sessionId}, function(frame) {
 
 	            	setConnected(true);
 	                console.log('Connected: ' + frame);
-	                stompClient.subscribe('/topic/1', function(roomMessageOutput) {
-	                    showRoomMessageOutput(JSON.parse(roomMessageOutput.body));
-	                });
-	                stompClient.subscribe('/queue/1', function(userMessageOutput) {
-	                    showUserMessageOutput(JSON.parse(userMessageOutput.body));
-	                });
+	                subscribe_user();
+	                buildRoomLists();
+	                buildUserList();
+		        	showUserHistorical();
 	            });
 	        }
 
-	        function disconnect() {
+			function subscribe_room() {
+				
+	        	//stompClient.subscribe('/topic/1', function(userMessageOutput) {
+                //    showUserMessageOutput(JSON.parse(userMessageOutput.body));
+                //});
+	        	document.getElementById('roomMessages').innerHTML = '';
+	        	if (roomSubscribe != null) {
+	        		roomSubscribe.unsubscribe();
+	        	}
+	        	showRoomHistorical();
+	        	var id = document.getElementById("subscribeRoomList").value;
+	        	if (id != -1) {
+	        		roomSubscribe = stompClient.subscribe('/room/'+id+'/subscribe', function(roomMessageOutput) {
+                    	showRoomMessageOutput(JSON.parse(roomMessageOutput.body));
+                	});
+		        	var i=0;
+		        	var found = false;
+		        	while (i< roomList.length && !found) {
+		        		if (roomList[i].chatroomId == id) {
+		        			document.getElementById("roomId").innerHTML = id;
+		        			document.getElementById("roomName").innerHTML = roomList[i].name;
+		        			document.getElementById("roomCreator").innerHTML = roomList[i].userCreateScreenName;
+		        			document.getElementById("roomCreateDate").innerHTML = roomList[i].createDateTime;
+		    		        found = true;
+		        		}
+		        		i++;
+		        	}
+		        	
+	        	} else {
+	        		document.getElementById("roomId").innerHTML = '';
+        			document.getElementById("roomName").innerHTML = '';
+        			document.getElementById("roomCreator").innerHTML = '';
+        			document.getElementById("roomCreateDate").innerHTML = '';
+	        	}
+	        }
+	        
+	        function subscribe_user() {
+	        	userSubscribe = stompClient.subscribe('/user/'+screenName+'/subscribe', function(userMessageOutput) {
+                    showUserMessageOutput(JSON.parse(userMessageOutput.body));
+                });
+	        }
 
-	            if(stompClient != null) {
+	        function buildRoomLists() {
+	        	var xhttp = new XMLHttpRequest();
+	            xhttp.open("GET", "http://localhost:8080/chatserver/v001/chatroom", true);
+	            xhttp.onreadystatechange = function() {
+	                if (this.readyState == 4 && this.status == 200) {
+	                    console.log('build room list successful');
+	                    roomList = JSON.parse(this.responseText);
+	                    
+	                    var listSend = document.getElementById("sendRoomList");
+	                    listSend.options.length = 0;
+	                    var option = document.createElement("option");
+	                    option.text = 'Select room to send the message';
+	                    option.value = -1;
+	                    listSend.add(option);
+	                    
+	                    var listSubscribe = document.getElementById("subscribeRoomList");
+	                    listSubscribe.options.length=0;
+	                    var option = document.createElement("option");
+	                    option.text = 'Select room to subscribe to..';
+	                    option.value = -1;
+	                    listSubscribe.add(option);
+	                    
+	                    for (i in roomList) {
+	                    	var listSend = document.getElementById("sendRoomList");
+	                    	var listSubscribe = document.getElementById("subscribeRoomList");
+		                    var option = document.createElement("option");
+		                    option.text = roomList[i].name;
+		                    option.value = roomList[i].chatroomId;
+		                    listSend.add(option);
+		                    option = document.createElement("option");
+		                    option.text = roomList[i].name;
+		                    option.value = roomList[i].chatroomId;
+		                    listSubscribe.add(option);
+	                    }
+	               	}
+	            };
+	            xhttp.setRequestHeader("Content-Type", "application/json");
+	            xhttp.setRequestHeader("Authorization", sessionId);
+	            xhttp.send();
+	        }
+
+	        function buildUserList() {
+	        	var xhttp = new XMLHttpRequest();
+	            xhttp.open("GET", "http://localhost:8080/chatserver/v001/user", true);
+	            xhttp.onreadystatechange = function() {
+	                if (this.readyState == 4 && this.status == 200) {
+	                    console.log('build user list successful');
+	                    var result = JSON.parse(this.responseText);
+	                    var obj = document.getElementById("sendUserList");
+	                    obj.options.length = 0;
+	                    var option = document.createElement("option");
+	                    option.text = 'Select user to send the message';
+	                    option.value = -1;
+	                    obj.add(option);
+	                    for (i in result) {
+	                    	var obj = document.getElementById("sendUserList");
+		                    var option = document.createElement("option");
+		                    option.text = result[i].screenName;
+		                    option.value = result[i].screenName;
+		                    obj.add(option);		
+	                    }
+	               	}
+	            };
+	            xhttp.setRequestHeader("Content-Type", "application/json");
+	            xhttp.setRequestHeader("Authorization", sessionId);
+	            xhttp.send();
+	        }
+
+	        function logout() {
+	        	if (userSubscribe != null) {userSubscribe.unsubscribe();}
+				if (roomSubscribe != null) {roomSubscribe.unsubscribe();}
+				if(stompClient != null) {
 	                stompClient.disconnect();
 	            }
+				sessionId = null;
+				roomList = null;
+	            screenName = null;
 
 	            setConnected(false);
 	            console.log("Disconnected");
 	            document.getElementById('divIdlogin').style.visibility = 'visible';
 	            document.getElementById('divIdregistration').style.visibility = 'hidden';
-		        
 	        }
 
-	        function buttonLogIn() {
+	        function login() {
+	        	var username = document.getElementById('username').value;
+	        	var password = document.getElementById('password').value;
+	        	console.log(username+' '+password);
+	            var xhttp = new XMLHttpRequest();
+	            xhttp.onreadystatechange = function() {
+	                if (this.readyState == 4 && this.status == 200) {
+	                    console.log('login successful');
+	                    var result = JSON.parse(this.responseText);
+	                    sessionId = result.sessionId;
+	                    screenName = result.screenName;
+	                    document.getElementById("loginResponse").innerHTML = '';
+	                    document.getElementById("divIdlogin").style.visibility = 'hidden';
+	                    document.getElementById("conversationDiv").style.visibility = 'visible';
+	                    connect();
+	               	}
+	                else {
+	                	document.getElementById("loginResponse").innerHTML = this.responseText;
+	                }
+	            };
+	            xhttp.open("POST", "http://localhost:8080/chatserver/v001/authenticate/login", true);
+	            xhttp.setRequestHeader("Content-Type", "application/json");
+	            var data = JSON.stringify({'userName':username, 'password':password}); 
+	            xhttp.send(data);
 	        	
 	        }
 	        
 	        function sendRoomMessage() {
-	        	var from = document.getElementById('from').value;
-	            var text = document.getElementById('text').value;
-	            // stompClient.send("/chatserver/room/1/messages", {}, JSON.stringify({'from':from, 'text':text}));
-	            var xhttp = new XMLHttpRequest();
-	            xhttp.open("POST", "http://localhost:8080/chatserver/room2/1/messages", true);
-	            xhttp.setRequestHeader("Content-Type", "application/json");
-	            var data = JSON.stringify({'from':from, 'text':text}); 
-	            xhttp.send(data);
+	        	var text = document.getElementById('text').value;
+	        	var roomId = document.getElementById('sendRoomList').value;
+	        	if (text.length>0 && roomId >0) {
+	            	var xhttp = new XMLHttpRequest();
+	            	xhttp.open("POST", "http://localhost:8080/chatserver/v001/room/"+roomId+"/messages", true);
+	            	xhttp.setRequestHeader("Content-Type", "application/json");
+	            	xhttp.setRequestHeader("Authorization", sessionId);
+	            	var data = JSON.stringify({'chatroom':roomId, 'message':text}); 
+	            	xhttp.send(data);
+	            	document.getElementById('text').value = '';
+	            	document.getElementById('sendRoomList').value = -1;
+	        	}
 	        }
 
 	        function sendUserMessage() {
-	        	var from = document.getElementById('from').value;
-	            var text = document.getElementById('text').value;
-	            // stompClient.send("/chatserver/room/1/messages", {}, JSON.stringify({'from':from, 'text':text}));
-	            var xhttp = new XMLHttpRequest();
-	            xhttp.open("POST", "http://localhost:8080/chatserver/user/1/messages", true);
-	            xhttp.setRequestHeader("Content-Type", "application/json");
-	            var data = JSON.stringify({'from':from, 'text':text}); 
-	            xhttp.send(data);
+	        	var text = document.getElementById('text').value;
+	        	var sendScreenName = document.getElementById('sendUserList').value;
+	        	if (text.length>0 && sendScreenName.length>0) {
+	        		var xhttp = new XMLHttpRequest();
+	            	xhttp.open("POST", "http://localhost:8080/chatserver/v001/user/"+sendScreenName+"/messages", true);
+	            	xhttp.setRequestHeader("Content-Type", "application/json");
+	            	xhttp.setRequestHeader("Authorization", sessionId);
+	            	var data = JSON.stringify({'privateScreenName':sendScreenName, 'message':text}); 
+	            	xhttp.send(data);
+	            	document.getElementById('text').value = '';
+	            	document.getElementById('sendUserList').value = -1;
+	        	}
 	        }
-
+	        
+	        function showUserHistorical() {
+	        	var xhttp = new XMLHttpRequest();
+	        	xhttp.onreadystatechange = function() {
+	                if (this.readyState == 4 && this.status == 200) {
+	                    console.log('hostorical successful');
+	                    var result = JSON.parse(this.responseText);
+	                    var response = document.getElementById('userMessages');
+        	            for (i in result) {
+        	            	var p = document.createElement('p');
+            	            p.style.wordWrap = 'break-word';
+            	            p.appendChild(document.createTextNode("Id:"+result[i].messageId + ": Auth:" + result[i].author_screenName + 
+	        	            		" (" + result[i].createDateTime + ")"+" - "+result[i].message));
+	        	            response.appendChild(p);
+        	            }
+	                }
+	                else {
+	                	console.log(this.responseText);
+	                }
+	            };
+	            xhttp.open("GET", "http://localhost:8080/chatserver/v001/user/messages", true);
+            	xhttp.setRequestHeader("Content-Type", "application/json");
+            	xhttp.setRequestHeader("Authorization", sessionId);
+            	xhttp.send();
+            	
+	        }
+	        
+	        function showRoomHistorical() {
+	        	var id = document.getElementById("subscribeRoomList").value;
+	        	var xhttp = new XMLHttpRequest();
+	        	xhttp.onreadystatechange = function() {
+	                if (this.readyState == 4 && this.status == 200) {
+	                    console.log('room hostorical successful');
+	                    var result = JSON.parse(this.responseText);
+	                    var response = document.getElementById('roomMessages');
+        	            var p = document.createElement('p');
+        	            p.style.wordWrap = 'break-word';
+        	            for (i in result) {
+        	            	var p = document.createElement('p');
+            	            p.style.wordWrap = 'break-word';
+            	            p.appendChild(document.createTextNode("Id:"+result[i].messageId + ": Auth:" + result[i].author_screenName + 
+	        	            		" (" + result[i].createDateTime + ")"+" - "+result[i].message));
+	        	            response.appendChild(p);
+        	            }
+	                }
+	                else {
+	                	console.log(this.responseText);
+	                }
+	            };
+	            xhttp.open("GET", "http://localhost:8080/chatserver/v001/room/"+id+"/messages", true);
+            	xhttp.setRequestHeader("Content-Type", "application/json");
+            	xhttp.setRequestHeader("Authorization", sessionId);
+            	xhttp.send();
+            	
+	        }
 	        
 	        function showUserMessageOutput(messageOutput) {
-
-	            var response = document.getElementById('userResponse');
+	            var response = document.getElementById('userMessages');
 	            var p = document.createElement('p');
 	            p.style.wordWrap = 'break-word';
-	            p.appendChild(document.createTextNode(messageOutput.from + ": " + messageOutput.text + " (" + messageOutput.time + ")"));
+	            p.appendChild(document.createTextNode("Id:"+messageOutput.messageId + ": Auth:" + messageOutput.author_screenName + 
+	            		" (" + messageOutput.createDateTime + ")"+" - "+messageOutput.message));
 	            response.appendChild(p);
 	        }
+
 	        function showRoomMessageOutput(messageOutput) {
 
-	            var response = document.getElementById('roomResponse');
+	            var response = document.getElementById('roomMessages');
 	            var p = document.createElement('p');
 	            p.style.wordWrap = 'break-word';
-	            p.appendChild(document.createTextNode(messageOutput.from + ": " + messageOutput.text + " (" + messageOutput.time + ")"));
+	            p.appendChild(document.createTextNode("Id:"+messageOutput.messageId + ": Auth:" + messageOutput.author_screenName + 
+	            		" (" + messageOutput.createDateTime + ")"+" - "+messageOutput.message));
 	            response.appendChild(p);
 	        }
-
+			function openRegister() {
+				document.getElementById("divIdlogin").style.visibility= 'hidden';
+				document.getElementById("divIdregistration").style.visibility='visible';
+			}
+			
+			function cancelRegistration() {
+				document.getElementById("regUsername").value="";
+				document.getElementById("regPassword").value="";
+				document.getElementById("regScreenName").value="";
+				document.getElementById("registrationResponse").innerHTML = "";
+				document.getElementById("divIdlogin").style.visibility= 'visible';
+				document.getElementById("divIdregistration").style.visibility='hidden';
+			}
+			
+			function register() {
+				var un = document.getElementById("regUsername").value;
+				var pw = document.getElementById("regPassword").value;
+				var sn = document.getElementById("regScreenName").value;
+				var xhttp = new XMLHttpRequest();
+	        	xhttp.onreadystatechange = function() {
+	                if (this.readyState == 4 && this.status == 200) {
+	                    console.log('registration complete');
+	                    cancelRegistration();
+	                }
+	                else {
+	                	document.getElementById("registrationResponse").innerHTML = this.responseText;
+	                }
+	            };
+	            xhttp.open("POST", "http://localhost:8080/chatserver/v001/user", true);
+            	xhttp.setRequestHeader("Content-Type", "application/json");
+            	xhttp.setRequestHeader("Authorization", sessionId);
+            	var data = JSON.stringify({'userName':un, 'password':pw, 'screenName':sn}); 
+            	xhttp.send(data);
+            	
+			}
+			
+			function createChatroom() {
+				var roomName = document.getElementById("newRoomName").value;
+				if (roomName.length>0) {
+					var xhttp = new XMLHttpRequest();
+		        	xhttp.onreadystatechange = function() {
+		                if (this.readyState == 4 && this.status == 200) {
+		                    console.log('new room created');
+		                    buildRoomLists();
+		                }
+		                else {
+		                	document.getElementById("newChatroomResponse").innerHTML = this.responseText;
+		                }
+		            };
+		            xhttp.open("POST", "http://localhost:8080/chatserver/v001/chatroom", true);
+	            	xhttp.setRequestHeader("Content-Type", "application/json");
+	            	xhttp.setRequestHeader("Authorization", sessionId);
+	            	var data = JSON.stringify({'name':roomName}); 
+	            	xhttp.send(data);
+				}
+			}
 	    </script>
+
 	    
 	</head>
 	
-	<body onload="disconnect()">
+	<body onload="logout()">
 
 		<div>
-			<div id="divIdlogin">
+			<div id="divIdlogin">Login:<br>
 				<input type="text" id="username" placeholder="Choose a username"/>
 				<input type="password" id="password" placeholder="Choose a password"/>
-				<button id="connect" onclick="connect();">Connect</button>
+				<button id="login" onclick="login();">Connect</button>
 				<button id="openRegister" onclick="openRegister();">Register New User</button>
+				<p id="loginResponse">Login Errors here!</p>
 		    </div>
-		    <div id="divIdregistration">
-				<input type="text" id="username" placeholder="Choose a username"/>
-				<input type="password" id="password" placeholder="Choose a password"/>
-				<input type="text" id="screenName" placeholder="Choose a screen name"/>
+		    <div id="divIdregistration">Registration:<br>
+				<input type="text" id="regUsername" placeholder="Choose a username"/>
+				<input type="password" id="regPassword" placeholder="Choose a password"/>
+				<input type="text" id="regScreenName" placeholder="Choose a screen name"/>
 				<button id="register" onclick="register();">Register</button>
-				<button id="cancelRegistration" onclick="register();">Cancel Registration</button>
-		    </div>
-			<br />
-		    <div>
-		        <button id="connect" onclick="connect();">Connect</button>
-		        <button id="disconnect" disabled="disabled" onclick="disconnect();">Disconnect</button>
+				<button id="cancelRegistration" onclick="cancelRegistration();">Cancel Registration</button>
+		    	<p id="registrationResponse">Registration Errors here!</p>
 		    </div>
 		    <br />
 		    <div id="conversationDiv">
+		        <button id="Logout" onclick="logout();">Logout</button>
 		        <input type="text" id="text" placeholder="Write a message..."/>
-		        <button id="sendRoomMessage" onclick="sendRoomMessage();">Send Room</button>
-		        <button id="sendUserMessage" onclick="sendUserMessage();">Send User</button>
-		        Room Response:
-		        <p id="roomResponse"></p>
-		        User Response:
-		        <p id="userResponse"></p>
+		        <select name="sendRoomList" id="sendRoomList" onChange="sendRoomMessage()"></select>
+		        <select name="sendUserList" id="sendUserList" onChange="sendUserMessage()"></select><br>
+		        <br><br>Room Information:<br> 
+		        Subscribe to room:<select name="subscibeRoomList" id="subscribeRoomList" onChange="subscribe_room()"></select><br>
+		        Chatroom Id: <b><span id="roomId"></span></b><br>
+		        Chatroom Name: <b><span id="roomName"></span></b><br>
+		        Chatroom Creator: <b><span id="roomCreator"></span></b><br>
+		        Chatroom Create Date: <b><span id="roomCreateDate"></span></b><br>
+		        Room Messages:<br>
+		        <p id="roomMessages"></p>
+		        <br><br>
+		        Create New Chatroom: <input type="text" id="newRoomName" placeholder="Enter unique room name"/>
+		        <button id="createChatroom" onclick="createChatroom();">Create Chatroom</button>
+		        <p id="newChatroomResponse">New Chatroom errors here!</p>
+		        <br><br>User Messages:<br>
+		        <p id="userMessages"></p>
 		    </div>
 		</div>
 

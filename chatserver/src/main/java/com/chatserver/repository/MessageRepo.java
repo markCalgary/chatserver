@@ -12,7 +12,7 @@ import com.chatserver.entity.UserEntity;
 @Repository
 public interface MessageRepo extends JpaRepository <MessageEntity, BigInteger>{
 
-	List <MessageEntity> findByChatroomId(BigInteger chatroomId);
+	List <MessageEntity> findByChatroomIdOrderByCreateDateTime(BigInteger chatroomId);
 	
-	List <MessageEntity> findByPrivateUserId(BigInteger privateUserId);
+	List <MessageEntity> findByPrivateUserIdOrderByCreateDateTime(BigInteger privateUserId);
 }

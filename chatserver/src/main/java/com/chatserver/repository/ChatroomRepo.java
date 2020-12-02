@@ -12,4 +12,5 @@ import com.chatserver.entity.UserEntity;
 @Repository
 public interface ChatroomRepo extends JpaRepository <ChatroomEntity, BigInteger>{
 
+	ChatroomEntity findByName(String name);
 }

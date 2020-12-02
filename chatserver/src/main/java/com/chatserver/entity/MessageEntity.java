@@ -3,20 +3,22 @@ package com.chatserver.entity;
 import java.math.BigInteger;
 import java.time.LocalDateTime;
 
+import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
-import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import javax.persistence.Index;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
 
-import com.sun.istack.NotNull;
+import com.chatserver.util.CreateIdUtil;
 
 @Entity
-@Table(name="message")
+@Table(name="message", indexes= {@Index(columnList="chatroomId"), @Index(columnList="privateUserId")})
 public class MessageEntity {
-	@Id @GeneratedValue private BigInteger messageId;
+	@Id @Column(precision = 14, scale = 0) private BigInteger messageId;
 	@ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "author_id", nullable = false) 
 	private UserEntity author;
 	@NotNull private LocalDateTime createDateTime;
@@ -27,6 +29,7 @@ public class MessageEntity {
 	@NotNull private String message;
 	
 	public MessageEntity (UserEntity inAuthor, BigInteger inChatroomId, BigInteger inPrivateUserId, String inMessage) {
+		this.messageId = CreateIdUtil.createId(CreateIdUtil.IDTYPE_MESSAGEID);
 		this.author = inAuthor;
 		this.createDateTime = LocalDateTime.now();
 		this.chatroomId = inChatroomId;

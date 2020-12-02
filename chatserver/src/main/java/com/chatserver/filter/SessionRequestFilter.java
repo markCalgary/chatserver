@@ -21,7 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.chatserver.model.SessionModel;
 import com.chatserver.service.MyUserDetailsService;
 import com.chatserver.service.SessionService;
-import com.chatserver.util.Utility;
+import com.chatserver.util.CreateIdUtil;
 
 @Component
 public class SessionRequestFilter extends OncePerRequestFilter{
@@ -35,7 +35,7 @@ public class SessionRequestFilter extends OncePerRequestFilter{
 			String auth = request.getHeader("Authorization");
 			SessionModel aSession = null;
 			
-			if (auth !=null && auth.length() == Utility.SESSIONID_LENGTH && sessionService.sessionExists(auth)) {
+			if (auth !=null && auth.length() == CreateIdUtil.SESSIONID_LENGTH && sessionService.sessionExists(auth)) {
 				aSession = sessionService.getSession(auth);
 			}
 

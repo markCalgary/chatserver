@@ -1,15 +1,12 @@
 package com.chatserver.dao;
 
-import java.math.BigInteger;
-
+import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 
-import com.sun.istack.NotNull;
-
-public class UserDao {
-	@NotNull @Size(min=7) private String userName;
-	@NotNull @Size(min=7) private String password;
-	@NotNull @Size(min=7) private String screenName;
+public class UserRequestDao {
+	@NotNull @Size (min=7, max=50) private String userName;
+	@NotNull @Size (min=7, max=50) private String password;
+	@NotNull @Size (min=7, max=50) private String screenName;
 
 	public String getUserName() {
 		return userName;
